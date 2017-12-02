@@ -97,7 +97,6 @@ def breadthFirstSearch(problem):
     "*** YOUR CODE HERE ***"
     util.raiseNotDefined()
 
-
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
