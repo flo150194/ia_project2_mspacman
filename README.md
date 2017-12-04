@@ -1,5 +1,10 @@
 # Pacman project folder
 
+## Maintainers
+
+Florian Merchie [flo150194](https://github.com/flo150194)
+Florian Peters [flopeters1337](https://github.com/flopeters1337)
+
 Credits: [UC Berkeley](http://ai.berkeley.edu/project_overview.html)
 
 ## How to launch the game
