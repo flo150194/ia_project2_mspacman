@@ -4,8 +4,6 @@ from util import *
 from copy import deepcopy
 import numpy as np
 import math
-# XXX: You should complete this class for Step 1
-
 
 class Agentsearch(Agent):
     def __init__(self, index=0, time_eater=40, g_pattern=-1):
@@ -31,6 +29,9 @@ class Agentsearch(Agent):
         self.goals = []
         # Importance given to the heuristic function
         self.h_coefficient = 1
+        # Average
+        self.average = True
+
         pass
 
     def getAction(self, state):
@@ -67,8 +68,14 @@ class Agentsearch(Agent):
         :param start: the start game state of the search as defined
                       in pacman.GameState.
         """
+        print(start.getGhostPositions())
 
         self.current = Node(start, None, None, [])
+        map = start.getFood()
+        dim = sorted([map.height, map.width])
+        if dim[1]/dim[0] > 2:
+            self.average = False
+
         nb_goals_left = len(self.goals)
 
         while len(self.current.goals) > 0:
@@ -157,7 +164,10 @@ class Agentsearch(Agent):
         best_heurisitc = math.inf
         for i in np.arange(len(Ds)):
             if Gs[i] > 0:
-                heuristic = self.h_coefficient*Ds[i]/Gs[i]
+                if self.average:
+                    heuristic = self.h_coefficient*Ds[i]/Gs[i]
+                else:
+                    heuristic = self.h_coefficient * Ds[i]
                 if heuristic < best_heurisitc:
                     best_state = i
                     best_heurisitc = heuristic
@@ -219,6 +229,7 @@ class Node:
         :return: the list of the children of the node
         """
         actions = self.state.getLegalActions(0)
+
         for action in actions:
             # Does not care about STOP action in search mode
             if (action != Directions.STOP):
@@ -230,9 +241,3 @@ class Node:
                                               deepcopy(self.path)))
 
         return self.children
-
-
-
-
-
-
