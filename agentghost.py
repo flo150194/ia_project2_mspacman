@@ -37,9 +37,8 @@ class Agentghost(Agent):
         self.goals = []
         # Importance given to the heuristic function
         self.h_coefficient = 1
-        # Average
-        self.average = True
-
+        # Next goal
+        self.next_goal = None
 
         pass
 
@@ -83,31 +82,42 @@ class Agentghost(Agent):
         self.current = DeterministicNode(start, None, None, [], 0)
         map = start.getFood()
         dim = sorted([map.height, map.width])
-        if dim[1]/dim[0] > 2:
-            self.average = False
 
-        next_goal = self.goals.pop()[-1]
+        self.next_goal = self.goals.pop()[-1]
         while len(self.goals) > 0:
 
             # Expand current Node and add children to set of frontier states
             self.current.expand_node()
             if self.pattern == 0:
                 children = self.current.play_leftyghost()
-            elif self.pattern == 1:
-                children = self.current.play_greedyghost()
-            if self.pattern < 2:
+            if self.pattern < 1:
                 self.add_deterministic_open_states(children)
 
-            # Apply progress heuristic to select the best frontier state
-            best_state = self.get_closest_state(next_goal)
+            # Apply heuristic to select the best frontier state
+            best_state = self.get_closest_state(self.next_goal)
 
             # Update the state
             self.current = self.open_states[best_state]
             del self.open_states[best_state]
 
-            # If a goal has been reached, clear the frontier states
-            distance = manhattanDistance(next_goal,
-                                 self.current.state.getPacmanPosition())
+            self.next_strategy()
+
+        # Retrieve the list of actions to perform
+        while self.current.parent != None:
+            self.actions.append(self.current.action)
+            self.current = self.current.parent
+
+
+    def next_strategy(self):
+        """
+        Update pacman's strategy based on the current state.
+        """
+
+        # If pacman is in feeding mode
+        if self.current.strategy == 0:
+            # If a goal has been reached, clear the frontier states and select
+            # a new goal.
+            distance = self.current.get_feeding_heuristic(self.next_goal)
             if distance == 0:
                 self.open_states[:] = []
                 self.open_states_positions[:] = []
@@ -115,16 +125,16 @@ class Agentghost(Agent):
                 self.goals = sorted(self.goals,
                                     key=lambda c: manhattanDistance(pacman, c),
                                     reverse=True)
-                next_goal = self.goals.pop()
+                self.next_goal = self.goals.pop()
 
+        # If pacamn is in capsule mode
+        elif self.current.strategy == 1:
+            # Do Something
+            m = 1
+        # If pacman is in hunting mode
+        else:
+            m = 1
 
-
-        # Retrieve the list of actions to perform
-        while self.current.parent != None:
-            print(self.current.state.getPacmanPosition())
-            print(self.current.state.getGhostPositions())
-            self.actions.append(self.current.action)
-            self.current = self.current.parent
 
     def add_deterministic_open_states(self, children):
         """
@@ -332,70 +342,41 @@ class DeterministicNode(Node):
 
         return self.children
 
-    def get_next_move_greedypattern(self, pacman, ghost, legal):
-        """
-        Compute the next move to perform for a ghost following the greedy
-        pattern.
-
-        :param pacman: pacaman's position
-        :param ghost:  ghost's position
-        :param legal:  list of legal actions of the ghost
-        :return: the action minimizing the distance from the ghost to pacman
-        """
-        min_dist = math.inf
-        best = -1
-        for i in np.arange(len(legal)):
-            action = legal[i]
-            if action == Directions.NORTH:
-                g = (ghost[0], ghost[1]+1)
-            elif action == Directions.EAST:
-                g = (ghost[0]+1, ghost[1])
-            elif action == Directions.WEST:
-                g = (ghost[0]-1, ghost[1])
-            elif action == Directions.SOUTH:
-                g = (ghost[0], ghost[1]-1)
-
-            dist = manhattanDistance(pacman, g)
-            if dist < min_dist:
-                min_dist = dist
-                best = i
-
-        return legal[best]
-
-    def play_greedyghost(self):
-        """
-        Make move the ghosts following the greedy pattern on all the children
-        of the node.
-
-        :return: the list of the children of the node
-        """
-
-        pacman = self.state.getPacmanPosition()
-        for child in self.children:
-            for k in np.arange(len(self.ghosts)):
-                ghost = self.ghosts[k]
-                legal = child.state.getLegalActions(k+1)
-                if not (child.state.isWin() or child.state.isLose()):
-                    action = self.get_next_move_greedypattern(pacman, ghost, legal)
-                    child.state = child.state.generateSuccessor(k + 1, action)
-                else:
-                    break
-
-            child.ghosts = child.state.getGhostPositions()
-
-        return self.children
-
 class StochasticNode(Node):
 
-    def __init__(self, state, parent, action, path, probs=None):
+    def __init__(self, state, parent, action, path, strategy, probs=None):
 
+        # Create the probas grid if root of the tree
         if probs is None:
-            self.probs = dict()
+            ghosts = state.getGhostPositions()
+            nb_ghosts = len(ghosts)
+            height = state.getWalls().height
+            width = state.getWalls().width
+            self.probs = np.zeros((height, width, nb_ghosts))
+            for i in np.arange(len(ghosts)):
+                coord = ghosts[i][::-1]
+                coord += (i,)
+                probs[coord] = 1
         else:
             self.probs = probs
 
-        super(StochasticNode, self).__init__(state, parent, action, path)
+        super(StochasticNode, self).__init__(state, parent,
+                                             action, path, strategy)
 
+    def play_greedy(self):
+        """
+        Updates the probabilities grid of the ghosts following the greedy
+        pattern.
+        """
 
+    def play_semi_random(self):
+        """
+        Updates the probabilities grid of the ghosts following the semi-random
+        pattern.
+        """
 
-
+    def play_unknown(self):
+        """
+        Updates the probabilities grid of the ghosts following the unknown
+        pattern.
+        """
