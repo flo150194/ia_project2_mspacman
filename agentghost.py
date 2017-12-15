@@ -60,7 +60,11 @@ class Agentghost(Agent):
             return action
 
         # When no more action, compute the goals and start the search
+        pacman = state.getPacmanPosition()
         self.goals = state.getFood().asList()
+        self.goals = sorted(self.goals,
+                            key=lambda c: manhattanDistance(pacman, c))
+        self.capsules = state.getCapsules().asList()
         self.sub_search(state)
 
         action = self.actions.pop()
@@ -76,15 +80,14 @@ class Agentghost(Agent):
                       in pacman.GameState.
         """
 
-        self.current = DeterministicNode(start, None, None, [])
+        self.current = DeterministicNode(start, None, None, [], 0)
         map = start.getFood()
         dim = sorted([map.height, map.width])
         if dim[1]/dim[0] > 2:
             self.average = False
 
-        nb_goals_left = len(self.goals)
-
-        while len(self.current.goals) > 0:
+        next_goal = self.goals.pop()[-1]
+        while len(self.goals) > 0:
 
             # Expand current Node and add children to set of frontier states
             self.current.expand_node()
@@ -95,34 +98,26 @@ class Agentghost(Agent):
             if self.pattern < 2:
                 self.add_deterministic_open_states(children)
 
-            open_states_costs = np.zeros(len(self.open_states))
-            open_states_best = np.zeros(len(self.open_states))
-
-            # Compute the closest frontier state to each goal
-            for goal in self.current.goals:
-                best, min_cost = self.get_closest_state(goal)
-                open_states_best[best] += 1
-                open_states_costs[best] += min_cost
-
-            # Average the costs of each frontier state
-            for i in np.arange(len(open_states_costs)):
-                if open_states_best[i] > 0:
-                    open_states_costs[i] = open_states_costs[i] / \
-                                           open_states_best[i]
-
             # Apply progress heuristic to select the best frontier state
-            best_state = self.progress_heuristic(open_states_costs,
-                                                 open_states_best)
+            best_state = self.get_closest_state(next_goal)
 
             # Update the state
             self.current = self.open_states[best_state]
             del self.open_states[best_state]
 
             # If a goal has been reached, clear the frontier states
-            if len(self.current.goals) < nb_goals_left:
+            distance = manhattanDistance(next_goal,
+                                 self.current.state.getPacmanPosition())
+            if distance == 0:
                 self.open_states[:] = []
                 self.open_states_positions[:] = []
-                nb_goals_left = len(self.current.goals)
+                pacman = self.current.state.getPacmanPosition()
+                self.goals = sorted(self.goals,
+                                    key=lambda c: manhattanDistance(pacman, c),
+                                    reverse=True)
+                next_goal = self.goals.pop()
+
+
 
         # Retrieve the list of actions to perform
         while self.current.parent != None:
@@ -180,38 +175,33 @@ class Agentghost(Agent):
                 best_state = i
                 min_cost = cost
 
-        return (best_state, min_cost)
-
-    def progress_heuristic(self, Ds, Gs):
-        """
-        Apply the progess heuristics method in order to find to best state
-        to explore among the frontier set.
-
-        :param Ds: List of the average costs per goal of the frontier states
-        :param Gs: List of the number of goals of which the frontier states
-                   are the closest
-        :return: the best state to explore
-        """
-        best_state = None
-        best_heurisitc = math.inf
-        for i in np.arange(len(Ds)):
-            if Gs[i] > 0:
-                if self.average:
-                    heuristic = self.h_coefficient*Ds[i]/Gs[i]
-                else:
-                    heuristic = self.h_coefficient * Ds[i]
-                if heuristic < best_heurisitc:
-                    best_state = i
-                    best_heurisitc = heuristic
-
         return best_state
 
-class DeterministicNode:
+    def get_closest_capsule(self):
+        """
+        Compute the closest capsule from the current pacman's position
+
+        :return: the closest capsule from pacman
+        """
+        caps = None
+        min_cost = math.inf
+        capsules = self.current.capsules
+        for i in np.arange(len(capsules)):
+            cost = self.current.get_capsules_heuristic(capsules[i])
+            if cost < min_cost:
+                caps = capsules[i]
+                min_cost = cost
+
+        return caps, min_cost
+
+
+class Node:
     """
-    Class representing a Node object designed for a tree search using A*
-    algorithm.
-    """
-    def __init__(self, state, parent, action, path):
+        Class representing a Node object designed for a tree search using A*
+        algorithm.
+        """
+
+    def __init__(self, state, parent, action, path, strategy):
         # Set of children states, empty while not expanded
         self.children = []
         # Parent of the node
@@ -220,12 +210,16 @@ class DeterministicNode:
         self.action = action
         # GameState of the node
         self.state = state
-        # Ghosts position
-        self.ghosts = self.state.getGhostPositions()
         # Goals that have not been reached yet
         self.goals = state.getFood().asList()
+        # Capsules
+        self.capsules = state.getCapsules().asList()
         # Costs dictionary
         self.costs = dict()
+        # Costs dictionary for Capsules
+        self.costs_capsules = dict()
+        # Current strategy of Pacman
+        self.strategy = strategy
         # Back_cost is the backward cost of the state
         # path is the set of previously visited states for a given goals set
         if parent is not None:
@@ -244,6 +238,23 @@ class DeterministicNode:
             cost = self.back_cost + \
                    manhattanDistance(self.state.getPacmanPosition(), i)
             self.costs[i] = cost
+        for i in self.capsules:
+            cost = self.back_cost + \
+                   manhattanDistance(self.state.getPacmanPosition(), i)
+            self.costs_capsules[i] = cost
+
+
+class DeterministicNode(Node):
+    """
+    Class representing a Node object designed for a tree search using A*
+    algorithm.
+    """
+    def __init__(self, state, parent, action, path, strategy):
+        # Ghosts position
+        self.ghosts = self.state.getGhostPositions()
+
+        super(DeterministicNode, self).__init__(state, parent, action, path,
+                                                strategy)
 
     def get_feeding_heuristic(self, goal):
         """
@@ -254,6 +265,12 @@ class DeterministicNode:
         """
         if goal in self.goals:
             return self.costs[goal]
+        else:
+            return 0
+
+    def get_capsules_heuristic(self, caps):
+        if caps in self.capsules:
+            return self.costs_capsules[caps]
         else:
             return 0
 
@@ -367,6 +384,18 @@ class DeterministicNode:
             child.ghosts = child.state.getGhostPositions()
 
         return self.children
+
+class StochasticNode(Node):
+
+    def __init__(self, state, parent, action, path, probs=None):
+
+        if probs is None:
+            self.probs = dict()
+        else:
+            self.probs = probs
+
+        super(StochasticNode, self).__init__(state, parent, action, path)
+
 
 
 
