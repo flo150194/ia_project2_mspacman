@@ -127,7 +127,7 @@ class Agentghost(Agent):
                                     reverse=True)
                 self.next_goal = self.goals.pop()
 
-        # If pacamn is in capsule mode
+        # If pacman is in capsule mode
         elif self.current.strategy == 1:
             # Do Something
             m = 1
@@ -342,6 +342,7 @@ class DeterministicNode(Node):
 
         return self.children
 
+
 class StochasticNode(Node):
 
     def __init__(self, state, parent, action, path, strategy, probs=None):
@@ -356,27 +357,178 @@ class StochasticNode(Node):
             for i in np.arange(len(ghosts)):
                 coord = ghosts[i][::-1]
                 coord += (i,)
-                probs[coord] = 1
+                probs[coord] = 1.0
         else:
             self.probs = probs
 
         super(StochasticNode, self).__init__(state, parent,
                                              action, path, strategy)
 
+    @staticmethod
+    def update_prob_greedy(probs, walls, pacman_pos):
+        """Update a probability grid according to a greedy ghost strategy.
+
+        :param probs: a numpy array of floats representing the initial
+        probabilities in the grid.
+        :param walls: a numpy array of booleans representing the walls in the
+        grid.
+        :param pacman_pos: a pair of indices representing Pacman's position in
+        the grid.
+        :return: a numpy array of floats which is the result of a one step
+        update of the initial probability grid according to a greedy ghost
+        strategy.
+        """
+        old_probs = probs.copy()
+        width = walls.width
+        height = walls.height
+
+        # Get all non-null elements in the probability grid
+        rows, cols = probs.nonzero()
+
+        for i, j in zip(rows, cols):
+            valid_positions = [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)]
+            valid_positions = list(filter(lambda x: (0 <= x[0] < width) and
+                                                    (0 <= x[1] < height) and
+                                          not walls[x[0]][x[1]],
+                                          valid_positions))
+
+            # Find min distance positions
+            min_pos = min(valid_positions, key=lambda x:
+                          manhattanDistance(x, pacman_pos))
+            min_dist = manhattanDistance(min_pos, pacman_pos)
+            possible_pos = [pos for pos in valid_positions
+                            if manhattanDistance(pos, pacman_pos) == min_dist]
+
+            # Update the grid
+            n_pos = len(possible_pos)
+            for row, col in possible_pos:
+                probs[row, col] += float(old_probs[i, j]) / float(n_pos)
+            if n_pos > 0:
+                probs[i, j] -= old_probs[i, j]
+
+        return probs
+
+    @staticmethod
+    def update_prob_lefty(probs, walls, direction):
+        #TODO: GENERALIZE TO PROBABILITIES (PROBLEM WITH DIRECTION)
+        """Update a probability grid according to a counterclockwise left
+        strategy.
+
+        :param probs: a numpy array of floats representing the initial
+        probabilities in the grid.
+        :param walls: a numpy array of booleans representing the walls in the
+        grid.
+        :param direction: a type of Directions to update the ghost's
+        probability.
+        :return: a numpy array of floats which is the result of a one step
+        update of the initial probability grid according to a counterclockwise
+        left strategy.
+        """
+        old_probs = probs.copy()
+        width = walls.width
+        height = walls.height
+
+        # Get all non-null elements in the probability grid
+        rows, cols = probs.nonzero()
+
+        for i, j in zip(rows, cols):
+            blocked = False
+
+            if direction != Directions.STOP:
+                if direction == Directions.LEFT and 0 <= i - 1 \
+                        and not walls[i - 1][j]:
+                    valid_positions = [(i - 1, j)]
+                elif direction == Directions.SOUTH and 0 <= j - 1 \
+                        and not walls[i][j - 1]:
+                    valid_positions = [(i, j - 1)]
+                elif direction == Directions.EAST and i + 1 < width \
+                        and not walls[i + 1][j]:
+                    valid_positions = [(i + 1, j)]
+                elif direction == Directions.NORTH and j + 1 < height \
+                        and not walls[i][j + 1]:
+                    valid_positions = [(i, j + 1)]
+                else:
+                    blocked = True
+            if blocked:
+                # The list is ordered in a counterclockwise fashion starting
+                # from the WEST direction
+                valid_positions = [(i - 1, j), (i, j - 1),
+                                   (i + 1, j), (i, j + 1)]
+                valid_positions = list(filter(lambda x: (0 <= x[0] < width) and
+                                              (0 <= x[1] < height) and
+                                              not walls[x[0]][x[1]],
+                                              valid_positions))
+
+            # Only update the probabilities if the ghost can move
+            if len(valid_positions) > 0:
+                row, col = valid_positions[0]
+                probs[row, col] += old_probs[i, j]
+                probs[i, j] -= old_probs[i, j]
+
+        return probs
+
+    @staticmethod
+    def update_prob_random_valid(probs, walls):
+        """Update a probability grid according to a random valid move strategy.
+
+        :param probs: a numpy array of floats representing the initial
+        probabilities in the grid.
+        :param walls: a numpy array of booleans representing the walls in the
+        grid.
+        :return: a numpy array of floats which is the result of a one step
+        update of the initial probability grid according to a random valid move
+        strategy.
+        """
+        old_probs = probs.copy()
+        width = walls.width
+        height = walls.height
+
+        # Get all non-null elements in the probability grid
+        rows, cols = probs.nonzero()
+
+        for i, j in zip(rows, cols):
+            valid_positions = [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)]
+            valid_positions = list(filter(lambda x: (0 <= x[0] < width) and
+                                                    (0 <= x[1] < height) and
+                                          not walls[x[0]][x[1]],
+                                          valid_positions))
+
+            n_pos = len(valid_positions)
+            for row, col in valid_positions:
+                probs[row, col] += float(old_probs[i, j]) / float(n_pos)
+            if n_pos > 0:
+                probs[i, j] -= old_probs[i, j]
+
+        return probs
+
     def play_greedy(self):
         """
         Updates the probabilities grid of the ghosts following the greedy
         pattern.
         """
+        # Get Pacman's current position
+        pacman_pos = self.state.getPacmanPosition()
+        walls = self.state.getWalls()
+
+        # Get the number of ghosts in the grid
+        _, _, num_ghosts = self.probs.shape
+
+        # Update the probability grid for each ghost
+        for ghost in range(num_ghosts):
+            self.probs[:, :, ghost] = \
+                self.update_prob_greedy(self.probs[:, :, ghost], walls,
+                                        pacman_pos)
 
     def play_semi_random(self):
         """
         Updates the probabilities grid of the ghosts following the semi-random
         pattern.
         """
+        pass
 
     def play_unknown(self):
         """
         Updates the probabilities grid of the ghosts following the unknown
         pattern.
         """
+        pass

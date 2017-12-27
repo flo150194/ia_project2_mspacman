@@ -59,7 +59,6 @@ class Agentsearch(Agent):
 
         return action
 
-
     def sub_search(self, start):
         """
         Performs a search following A* algorithm with progess heuristics
@@ -173,6 +172,7 @@ class Agentsearch(Agent):
                     best_heurisitc = heuristic
 
         return best_state
+
 
 class Node:
     """
