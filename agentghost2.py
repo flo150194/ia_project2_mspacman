@@ -11,10 +11,10 @@ from greedyghost import Greedyghost
 PACMAN = 0
 # Coefficients
 coef_next_food = -1.5
-coef_act_ghost = -1/2
-coef_scared_ghost = -2
+coef_act_ghost = -1/3.5
+coef_scared_ghost = -3
 coef_num_foods = -4
-coef_num_caps = -20
+coef_num_caps = -30
 
 class Agentghost2(Agent):
 
@@ -34,6 +34,7 @@ class Agentghost2(Agent):
         """
         # Ghosts pattern
         self.pattern = g_pattern
+        self.tree = None
         self.num_agent = 0
         if self.pattern == 0:
             self.strategy = play_lefty
@@ -43,6 +44,7 @@ class Agentghost2(Agent):
             self.strategy = play_semi_random
         else:
             self.strategy = play_unknown
+
 
     def getAction(self, state):
         """
@@ -57,61 +59,97 @@ class Agentghost2(Agent):
         """
 
         self.num_agent = len(state.getGhostPositions())+1
-        max_depth = self.num_agent*4
-        root = PacmanNode(state, max_depth)
-        self.expectiminimax(root, PACMAN)
+        max_depth = self.num_agent*3
 
-        action = None
-        max_score = -math.inf
-        for child in root.children:
-            if child.score > max_score:
-                action = child.action
-                max_score = child.score
+        self.tree = PacmanNode(state, max_depth)
+        v = self.expectimax(self.tree, PACMAN, -math.inf, math.inf, max_depth)
 
-        return action
+        for child in self.tree.children:
+            if child.score == v:
+                self.tree = child
+                return child.action
 
-
-    def expectiminimax(self, node, agent):
+    def expectimax(self, node, agent, alpha, beta, depth):
         """
-        Performs an ExpectiMinimax step.
+        Performs a max step of the expectiminimax algorithm, with alpha-beta
+        pruning.
 
-        :param node: Node object representing the current search node
-        :param agent: number representing the agent that plays at this step
-        :return: the best
+        :param node: a PacmanNode object representing the current state
+        :param agent: a number representing the index of the agent
+        :param alpha: a number representing the alpha value of the pruning
+        :param beta: a number representing the beta value of the pruning
+        :return: the max value of the children of the node
         """
+
+        # If game over or max depth reached
         if node.state.isWin() or node.state.isLose():
             node.set_score(node.state.getScore())
-        elif node.depth == 0:
+        elif depth == 0:
             node.set_score(node.evaluation_function())
+
+
+        # Search with alpha-beta pruning
         else:
-            if isinstance(node, PacmanNode):
-                scores = []
-                legal = node.state.getLegalPacmanActions()
-                for action in legal:
-                    state = node.state.generateSuccessor(PACMAN, action)
-                    child = GhostNode(state, node.depth-1, node, action)
-                    node.children.append(child)
-                for child in node.children:
-                    next_agent = int((agent+1) % self.num_agent)
-                    scores.append(self.expectiminimax(child, next_agent))
-                node.set_score(max(scores))
-            else:
-                score = 0
-                legal = node.state.getLegalActions(agent)
-                probs = self.strategy(node.state, agent)
-                for action in legal:
+            v = -math.inf
+
+            legal = node.state.getLegalPacmanActions()
+            for action in legal:
+                state = node.state.generateSuccessor(PACMAN, action)
+                child = GhostNode(state, node.depth - 1, node, action)
+                node.children.append(child)
+
+            for child in node.children:
+                next_agent = int((agent + 1) % self.num_agent)
+                v = max([v, self.expectichance(child, next_agent, alpha, beta,
+                                               depth-1)])
+                if v >= beta:
+                    node.set_score(v)
+                    return node.score
+                alpha = max(v, alpha)
+            node.set_score(v)
+
+        return node.score
+
+    def expectichance(self, node, agent, alpha, beta, depth):
+        """
+        Performs a chance step of the expectiminimax algorithm, with alpha-beta
+        pruning.
+
+        :param node: a GhostNode representing the current state
+        :param agent: a number representing the index of the agent
+        :param alpha: a number representing the alpha value of the pruning
+        :param beta: a number representing the beta value of the pruning
+        :return: the expected value of the children of the node
+        """
+
+        if node.state.isWin() or node.state.isLose():
+            node.set_score(node.state.getScore())
+        elif depth == 0:
+            node.set_score(node.evaluation_function())
+
+        else:
+            score = 0
+            legal = node.state.getLegalActions(agent)
+            probs = self.strategy(node.state, agent)
+            next_agent = int((agent + 1) % self.num_agent)
+            for action in legal:
+                if probs[action] > 0:
                     state = node.state.generateSuccessor(agent, action)
                     # Next turn is Pacman
-                    if agent == self.num_agent-1:
-                        child = PacmanNode(state, node.depth-1, node, action)
+                    if agent == self.num_agent - 1:
+                        child = PacmanNode(state, node.depth - 1, node, action)
+                        score += probs[child.action] * \
+                                 self.expectimax(child, next_agent, alpha, beta,
+                                                 depth-1)
                     else:
-                        child = GhostNode(state, node.depth-1, node, action)
+                        child = GhostNode(state, node.depth - 1, node, action)
+                        score += probs[child.action] * \
+                                 self.expectichance(child, next_agent,
+                                                    alpha, beta, depth-1)
                     node.children.append(child)
-                for child in node.children:
-                    next_agent = int((agent + 1) % self.num_agent)
-                    score += probs[child.action] * \
-                             self.expectiminimax(child, next_agent)
-                node.set_score(score)
+
+            node.set_score(score)
+
         return node.score
 
 
@@ -132,6 +170,9 @@ class Node:
     def set_score(self, score):
         self.score = score
 
+    def set_depth(self, depth):
+        self.depth = depth
+
     def evaluation_function(self):
 
         # Get required information
@@ -148,7 +189,7 @@ class Node:
         num_food = num_foods(foods)
         num_caps = num_capsules(capsules)
 
-        # Return score
+        # Return combined score
         return score + coef_next_food*next_food + coef_act_ghost*act_ghost + \
                coef_scared_ghost*scared + coef_num_foods*num_food + \
                coef_num_caps*num_caps
@@ -297,7 +338,7 @@ def closest_scared_ghost(pacman, ghosts):
             ghost_distances.append(manhattanDistance(ghost.getPosition(),
                                                      pacman))
 
-    return min(ghost_distances) if len(ghost_distances) > 0 else 1
+    return min(ghost_distances) if len(ghost_distances) > 0 else 0
 
 def closest_capsule(pacman, caps_pos):
     """
