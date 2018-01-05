@@ -45,7 +45,7 @@ def closest_food(pacman, food_pos, grid):
     queue = Queue()
     queue.push((deepcopy(pacman), 0))
 
-    while (not queue.isEmpty()):
+    while not queue.isEmpty():
         cur = queue.pop()
         if cur[0] in food_pos:
             return cur[1]
@@ -178,28 +178,30 @@ def predict_pos_safeness(pos, grid, pacman_depth, ghosts):
 
     :param pos: a tuple representing the position for which the safeness is
                 predicted.
+    :param grid: TODO
+    :param pacman_depth: TODO
     :param map: a binary grid representing the maze
     :param pacman: a tuple representing Pacman's position
     :param ghosts: a list of tuples representing the ghosts' positions
     :return: True if the position if safe, False otherwise
     """
-    ghost_depth = [-1 for x in range(len(ghosts))]
-    scared = [-1 for x in range(len(ghosts))]
+    ghost_depth = [-1] * len(ghosts)
+    scared = [-1] * len(ghosts)
     seen = [deepcopy(pos)]
 
     queue = Queue()
     queue.push((deepcopy(pos), 0))
     nb_tiles = grid.height * grid.width - len(grid.asList())
 
-    while (not queue.isEmpty() and len(seen) < nb_tiles):
+    while not queue.isEmpty() and len(seen) < nb_tiles:
         cur = queue.pop()
         for i in range(len(ghosts)):
             ghost = ghosts[i]
             cur_pos = cur[0]
             pos = ghost.getPosition()
             if ghost_depth[i] < 0 and scared[i] < 0 and \
-                            abs(cur_pos[0] - pos[0]) <= 0.5 and \
-                            abs(cur_pos[1] - pos[1]) <= 0.5:
+                    abs(cur_pos[0] - pos[0]) <= 0.5 and \
+                    abs(cur_pos[1] - pos[1]) <= 0.5:
                 if ghost.scaredTimer == 0:
                     ghost_depth[i] = cur[1]
                     scared[i] = math.inf
@@ -233,6 +235,7 @@ def neighbor_lookup(pos, grid, depth=0, delta=1.0):
 
     :param pos: a tuple representing the current position
     :param grid: a binary grid representing the maze
+    :param depth: TODO
     :param delta: number representing the considered displacement
     :return: a list of the reachable positions
     """
