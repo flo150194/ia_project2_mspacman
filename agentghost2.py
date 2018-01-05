@@ -6,15 +6,24 @@ import numpy as np
 import math
 from leftyghost import Leftyghost
 from greedyghost import Greedyghost
-# XXX: You should complete this class for Step 2
 
+from algorithm_functions import *
+
+# Evaluation Function Coefficients
+NEXT_FOOD = [0, -1, -1.5, -1.75]
+ACT_GHOST = [1.5, 2, 1.5, 1]
+SCARED_GHOST = [-1.5, -1.5, 0, 0]
+NUM_SCARED = [-30, -20, 0, 0]
+NUM_FOOD = [-1, -4, -4.5, -4.5]
+NUM_CAPS = [20, -50, -50, -50]
+
+# Algorithm Constants
 PACMAN = 0
-# Coefficients
-coef_next_food = -1.5
-coef_act_ghost = -1/3.5
-coef_scared_ghost = -3
-coef_num_foods = -4
-coef_num_caps = -30
+MAX_DEPTH = 1
+PATTERN_THRESHOLD = 0.9
+PROBA_THRESHOLD = 0.1
+LEFTY, GREEDY, SEMI, UNKNOWN = 0, 1, 2, 3
+HUNT, DANGEROUS, NORMAL, SAFE = 0, 1, 2, 3
 
 class Agentghost2(Agent):
 
@@ -34,17 +43,27 @@ class Agentghost2(Agent):
         """
         # Ghosts pattern
         self.pattern = g_pattern
-        self.tree = None
-        self.num_agent = 0
-        if self.pattern == 0:
+        if self.pattern == LEFTY:
             self.strategy = play_lefty
-        elif self.pattern == 1:
+        elif self.pattern == GREEDY:
             self.strategy = play_greedy
-        elif self.pattern == 2:
+        elif self.pattern == SEMI:
             self.strategy = play_semi_random
         else:
+            self.pattern = UNKNOWN
             self.strategy = play_unknown
 
+        # Algorithm variables
+        self.tree = None
+        self.previous = None
+        self.num_foods = 0
+        self.num_agent = 0
+        self.num_scared = 0
+        self.ghosts_previous = None
+        self.ghosts_proba = None
+        self.lefty_proba = None
+        self.greedy_proba = None
+        self.semi_random_proba = None
 
     def getAction(self, state):
         """
@@ -59,15 +78,138 @@ class Agentghost2(Agent):
         """
 
         self.num_agent = len(state.getGhostPositions())+1
-        max_depth = self.num_agent*3
+        max_depth = self.num_agent*MAX_DEPTH
+
+        # Init the algorithm variables if first turn
+        if self.tree is None:
+            self.ghosts_path = [[] for x in range(self.num_agent-1)]
+            dist = Counter()
+            dist['lefty'], dist['greedy'], dist['semi'] = 1/3, 1/3, 1/3
+            self.ghosts_proba = [dist.copy() for x in
+                                 range(self.num_agent-1)]
+            self.num_foods = num_foods(state.getFood().asList())
+
+        # Perform pattern inference if unknown pattern
+        elif self.pattern == 3:
+            self.pattern_inference(state)
 
         self.tree = PacmanNode(state, max_depth)
-        v = self.expectimax(self.tree, PACMAN, -math.inf, math.inf, max_depth)
+        self.ghosts_previous = state.getGhostPositions()
 
-        for child in self.tree.children:
-            if child.score == v:
-                self.tree = child
-                return child.action
+        neighbor_tiles, _ = neighbor_lookup(state.getPacmanPosition(),
+                                     state.getWalls())
+        num_scared = num_scared_ghost(state.getGhostStates())
+
+        # If needed, perform expectiminimax
+        if self.previous is None or \
+                        self.previous == Directions.STOP or\
+                        len(neighbor_tiles) != 2 or\
+                        num_scared < self.num_scared:
+            v = self.expectimax(self.tree, PACMAN, -math.inf, math.inf,
+                                max_depth)
+
+            # Retrieve the best action(s) according to expectiminimax
+            actions = []
+            for child in self.tree.children:
+                if child.score == v:
+                    actions.append(child.action)
+
+            action = pick_safe_action(state, deepcopy(actions))
+
+            # If no safe action, only follow expectiminimax for this turn
+            if action is not None:
+                self.previous = action
+            else:
+                action = random.choice(actions)
+                self.previous = None
+
+        # If engaged in a safe path, just follow it
+        else:
+            for move in state.getLegalPacmanActions():
+                if move != Directions.STOP and \
+                                move != Directions.REVERSE[self.previous]:
+                    action, self.previous = move, move
+                    break
+
+        self.num_scared = num_scared_ghost(state.getGhostStates())
+
+
+
+        # If a capsule has been eaten, ghosts are scared and this must be
+        # considered
+        caps = num_capsules(state.getCapsules())
+        caps2 = num_capsules(self.tree.state.getCapsules())
+        if caps2 != caps:
+            pattern_state = self.tree.state
+        else:
+            pattern_state = state
+
+        # Compute probability distribution for each pattern and ghost
+        if self.pattern == 3:
+            self.lefty_proba = [play_lefty(pattern_state, i+1) for i in
+                                range(self.num_agent-1)]
+            self.greedy_proba = [play_greedy(pattern_state, i + 1) for i in
+                                 range(self.num_agent - 1)]
+            self.semi_random_proba = [play_semi_random(pattern_state, i + 1)
+                                      for i in range(self.num_agent - 1)]
+
+        return action
+
+
+    def pattern_inference(self, state):
+        """
+        Trys to infer a still unknown pattern of the ghosts based on their
+        previous moves.
+
+        :param state: a GameState object representing the current state of the
+                      game.
+        """
+        ghosts = state.getGhostPositions()
+        total_probs = Counter()
+        total_probs['lefty'], total_probs['greedy'] = 1, 1
+        total_probs['semi'] = 1
+
+        for i in np.arange(len(ghosts)):
+            pos, prev = ghosts[i], self.ghosts_previous[i]
+            result = np.subtract(pos, prev)
+            if result[0] == 0 and result[1] > 0 and result[1] <= 1:
+                action = Directions.NORTH
+            elif result[0] == 0 and result[1] < 0 and result[1] >= -1:
+                action = Directions.SOUTH
+            elif result[0] > 0 and result[0] <= 1 and result[1] == 0:
+                action = Directions.EAST
+            elif result[0] < 0 and result[0] >= -1 and result[1] == 0:
+                action = Directions.WEST
+            else:
+                action = None
+
+            # Retrieve Probabilities of the strategies for the ghost
+            if action is not None:
+                lefty = self.lefty_proba[i][action]
+                greedy = self.greedy_proba[i][action]
+                semi = self.semi_random_proba[i][action]
+                self.ghosts_proba[i]['lefty'] *= lefty
+                self.ghosts_proba[i]['greedy'] *= greedy
+                self.ghosts_proba[i]['semi'] *= semi
+                self.ghosts_proba[i].normalize()
+                total_probs['lefty'] *= self.ghosts_proba[i]['lefty']
+                total_probs['greedy'] *= self.ghosts_proba[i]['greedy']
+                total_probs['semi'] *= self.ghosts_proba[i]['semi']
+                total_probs.normalize()
+
+        # Retrieve the max probability and check if the threshold is reached
+        pattern = total_probs.argMax()
+        proba = total_probs[pattern]
+        if proba > PATTERN_THRESHOLD:
+            if pattern == 'lefty':
+                self.strategy = play_lefty
+                self.pattern = LEFTY
+            elif pattern == 'greedy':
+                self.strategy = play_greedy
+                self.pattern = GREEDY
+            else:
+                self.strategy = play_semi_random
+                self.pattern = SEMI
 
     def expectimax(self, node, agent, alpha, beta, depth):
         """
@@ -82,11 +224,13 @@ class Agentghost2(Agent):
         """
 
         # If game over or max depth reached
-        if node.state.isWin() or node.state.isLose():
+        if node.state.isWin():
             node.set_score(node.state.getScore())
+        elif node.state.isLose():
+            node.set_score(-math.inf)
         elif depth == 0:
-            node.set_score(node.evaluation_function())
-
+            node.set_score(node.evaluation_function(self.num_foods,
+                                                    self.pattern))
 
         # Search with alpha-beta pruning
         else:
@@ -122,18 +266,21 @@ class Agentghost2(Agent):
         :return: the expected value of the children of the node
         """
 
-        if node.state.isWin() or node.state.isLose():
+        if node.state.isWin():
             node.set_score(node.state.getScore())
+        elif node.state.isLose():
+            node.set_score(-math.inf)
         elif depth == 0:
-            node.set_score(node.evaluation_function())
+            node.set_score(node.evaluation_function(self.num_foods,
+                                                    self.pattern))
 
         else:
             score = 0
             legal = node.state.getLegalActions(agent)
-            probs = self.strategy(node.state, agent)
+            probs = self.strategy(node.ghost_state, agent)
             next_agent = int((agent + 1) % self.num_agent)
             for action in legal:
-                if probs[action] > 0:
+                if probs[action] > PROBA_THRESHOLD:
                     state = node.state.generateSuccessor(agent, action)
                     # Next turn is Pacman
                     if agent == self.num_agent - 1:
@@ -173,7 +320,7 @@ class Node:
     def set_depth(self, depth):
         self.depth = depth
 
-    def evaluation_function(self):
+    def evaluation_function(self, start_food, pattern):
 
         # Get required information
         pacman = self.state.getPacmanPosition()
@@ -181,23 +328,65 @@ class Node:
         foods = self.state.getFood().asList()
         capsules = self.state.getCapsules()
         score = self.state.getScore()
+        grid = self.state.getWalls()
+
+        if pattern == LEFTY:
+            limit = 0
+        elif grid.height*grid.width > 250:
+            limit = 2
+        else:
+            limit = 4
 
         # Compute eval functions
-        next_food = closest_food(pacman, foods)
-        act_ghost = closest_ghost(pacman, ghosts)
-        scared = closest_scared_ghost(pacman, ghosts)
+        next_food = closest_food(pacman, foods, grid)
+        _, act_ghost, scared = predict_pos_safeness(pacman, grid, 0, ghosts)
         num_food = num_foods(foods)
         num_caps = num_capsules(capsules)
+        num_scared = num_scared_ghost(ghosts)
+
+        if num_scared > 0 and (act_ghost > limit or act_ghost == 0):
+            scared *= SCARED_GHOST[HUNT]
+            num_scared *= NUM_SCARED[HUNT]
+            num_caps *= NUM_CAPS[HUNT]
+            act_ghost *= ACT_GHOST[HUNT]
+            next_food *= NEXT_FOOD[HUNT]
+            num_food *= NUM_FOOD[HUNT]
+
+        elif act_ghost <= limit:
+            scared *= SCARED_GHOST[DANGEROUS]
+            num_scared *= NUM_SCARED[DANGEROUS]
+            num_caps *= NUM_CAPS[DANGEROUS]
+            act_ghost *= ACT_GHOST[DANGEROUS]
+            next_food *= NEXT_FOOD[DANGEROUS]
+            num_food *= NUM_FOOD[DANGEROUS]
+
+        elif act_ghost > limit and act_ghost <= limit*2:
+            scared *= SCARED_GHOST[NORMAL]
+            num_scared *= NUM_SCARED[NORMAL]
+            num_caps *= NUM_CAPS[NORMAL]
+            act_ghost *= ACT_GHOST[NORMAL]
+            next_food *= NEXT_FOOD[NORMAL]
+            num_food *= NUM_FOOD[NORMAL]
+
+        else:
+            scared *= SCARED_GHOST[SAFE]
+            num_scared *= NUM_SCARED[SAFE]
+            num_caps *= NUM_CAPS[SAFE]
+            act_ghost *= ACT_GHOST[SAFE]
+            next_food *= NEXT_FOOD[SAFE]
+            num_food *= NUM_FOOD[SAFE]
+
+        score += next_food + act_ghost + scared + num_food + num_caps + \
+                 num_scared
 
         # Return combined score
-        return score + coef_next_food*next_food + coef_act_ghost*act_ghost + \
-               coef_scared_ghost*scared + coef_num_foods*num_food + \
-               coef_num_caps*num_caps
+        return score
 
 class PacmanNode(Node):
 
     def __init__(self, state, depth, parent=None, action=None):
         super(PacmanNode, self).__init__(state, depth, parent, action)
+        self.ghost_state = self.state
 
 
 class GhostNode(Node):
@@ -205,11 +394,11 @@ class GhostNode(Node):
     def __init__(self, state, depth, parent=None, action=None):
         self.probs = []
         super(GhostNode, self).__init__(state, depth, parent, action)
+        self.ghost_state = parent.ghost_state
 
-
-##############################
-#  Ghosts States Generation  #
-##############################
+###############################
+#  Ghosts Position Inference  #
+###############################
 
 def play_lefty(state, agent):
     """
@@ -246,6 +435,7 @@ def play_random(state, agent):
     for action in legal:
         probs[action] = 1/len(legal)
 
+    probs.normalize()
     return probs
 
 def play_semi_random(state, agent):
@@ -270,6 +460,7 @@ def play_semi_random(state, agent):
         probs[action] = 0.25*lefty[action] + 0.5*greedy[action] + \
                         0.25*randy[action]
 
+    probs.normalize()
     return probs
 
 def play_unknown(state, agent):
@@ -282,78 +473,17 @@ def play_unknown(state, agent):
     :return: a Counter object linking legal actions and their probability
     """
 
-    pass
+    probs = Counter()
+    legal = state.getLegalActions(agent)
 
-###########################
-#  Evaluation Functions  #
-###########################
+    # Compute distribution for each possible strategy
+    lefty = play_lefty(state, agent)
+    greedy = play_greedy(state, agent)
+    semi_randy = play_semi_random(state, agent)
 
-def closest_food(pacman, food_pos):
-    """
-    Computes the closest distance of any food dot to Pacman.
+    for action in legal:
+        probs[action] = (1/3)*lefty[action] + (1/3)*greedy[action] + \
+                        (1/3)*semi_randy[action]
 
-    :param pacman: tuple representing Pacman's position
-    :param food_pos: list of tuples representing positions of food dots
-    :return: the closest distance to Pacman
-    """
-    food_distances = []
-    for food in food_pos:
-        food_distances.append(manhattanDistance(food, pacman))
-    return min(food_distances) if len(food_distances) > 0 else 1
-
-def closest_ghost(pacman, ghosts):
-    """
-    Computes the closest distance of any active ghost to Pacman.
-
-    :param pacman: tuple representing Pacman's position
-    :param ghosts: list of tuples representing ghosts' positions
-    :return: the closest distance to Pacman
-    """
-    ghost_distances = []
-    for ghost in ghosts:
-        isScared = ghost.scaredTimer > 0
-        if not isScared:
-            ghost_distances.append(manhattanDistance(ghost.getPosition(),
-                                                     pacman))
-    return min(ghost_distances) if len(ghost_distances) > 0 else 1
-
-def num_foods(foods):
-    return len(foods)
-
-def num_capsules(caps):
-    return len(caps)
-
-def closest_scared_ghost(pacman, ghosts):
-    """
-    Computes the closest distance of any scared ghost to Pacman.
-
-    :param pacman: tuple representing Pacman's position
-    :param ghosts: list of tuples representing ghosts' positions
-    :return: the closest distance to Pacman
-    """
-    ghost_distances = []
-    for ghost in ghosts:
-        isScared = ghost.scaredTimer > 0
-        if isScared:
-            ghost_distances.append(manhattanDistance(ghost.getPosition(),
-                                                     pacman))
-
-    return min(ghost_distances) if len(ghost_distances) > 0 else 0
-
-def closest_capsule(pacman, caps_pos):
-    """
-    Computes the closest distance of any capsule to Pacman.
-
-    :param pacman: tuple representing Pacman's position
-    :param caps_pos: list of tuples representing positions of capsules
-    :return: the closest distance to Pacman
-    """
-    capsule_distances = []
-    for caps in caps_pos:
-        capsule_distances.append(manhattanDistance(caps, pacman))
-    return min(capsule_distances) if len(capsule_distances) > 0 else 9999999
-
-
-
-
-
+    probs.normalize()
+    return probs
