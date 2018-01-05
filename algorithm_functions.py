@@ -178,8 +178,9 @@ def predict_pos_safeness(pos, grid, pacman_depth, ghosts):
 
     :param pos: a tuple representing the position for which the safeness is
                 predicted.
-    :param grid: TODO
-    :param pacman_depth: TODO
+    :param grid: a Grid object representing the maze
+    :param pacman_depth: a number representing the minimum number of moves
+           required by Pacman to reach the position
     :param map: a binary grid representing the maze
     :param pacman: a tuple representing Pacman's position
     :param ghosts: a list of tuples representing the ghosts' positions
@@ -235,7 +236,8 @@ def neighbor_lookup(pos, grid, depth=0, delta=1.0):
 
     :param pos: a tuple representing the current position
     :param grid: a binary grid representing the maze
-    :param depth: TODO
+    :param depth: a number representing the search depth if the function is
+           called during the BFS of the previous function
     :param delta: number representing the considered displacement
     :return: a list of the reachable positions
     """

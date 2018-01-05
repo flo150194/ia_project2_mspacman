@@ -93,7 +93,7 @@ class Agentghost2(Agent):
         elif self.pattern == 3:
             self.pattern_inference(state)
 
-        self.tree = PacmanNode(state, max_depth)
+        self.tree = PacmanNode(state)
         self.ghosts_previous = state.getGhostPositions()
 
         neighbor_tiles, _ = neighbor_lookup(state.getPacmanPosition(),
@@ -215,7 +215,8 @@ class Agentghost2(Agent):
         :param agent: a number representing the index of the agent
         :param alpha: a number representing the alpha value of the pruning
         :param beta: a number representing the beta value of the pruning
-        :param depth: TODO
+        :param depth: a number representing the number of turns that can still
+                      be played before stopping the search
         :return: the max value of the children of the node
         """
 
@@ -235,7 +236,7 @@ class Agentghost2(Agent):
             legal = node.state.getLegalPacmanActions()
             for action in legal:
                 state = node.state.generateSuccessor(PACMAN, action)
-                child = GhostNode(state, node.depth - 1, node, action)
+                child = GhostNode(state, node, action)
                 node.children.append(child)
 
             for child in node.children:
@@ -259,7 +260,8 @@ class Agentghost2(Agent):
         :param agent: a number representing the index of the agent
         :param alpha: a number representing the alpha value of the pruning
         :param beta: a number representing the beta value of the pruning
-        :param depth: TODO
+        :param depth: a number representing the number of turns that can still
+                      be played before stopping the search
         :return: the expected value of the children of the node
         """
 
@@ -281,12 +283,12 @@ class Agentghost2(Agent):
                     state = node.state.generateSuccessor(agent, action)
                     # Next turn is Pacman
                     if agent == self.num_agent - 1:
-                        child = PacmanNode(state, node.depth - 1, node, action)
+                        child = PacmanNode(state, node, action)
                         score += probs[child.action] * \
                             self.expectimax(child, next_agent, alpha, beta,
                                             depth-1)
                     else:
-                        child = GhostNode(state, node.depth - 1, node, action)
+                        child = GhostNode(state, node, action)
                         score += probs[child.action] * \
                             self.expectichance(child, next_agent, alpha, beta,
                                                depth-1)
@@ -303,12 +305,11 @@ class Agentghost2(Agent):
 
 class Node:
 
-    def __init__(self, state, depth, parent=None, action=None):
+    def __init__(self, state, parent=None, action=None):
         self.state = state
         self.parent = parent
         self.action = action
         self.children = []
-        self.depth = depth
         self.score = 0
 
     def set_score(self, score):
@@ -382,16 +383,16 @@ class Node:
 
 class PacmanNode(Node):
 
-    def __init__(self, state, depth, parent=None, action=None):
-        super(PacmanNode, self).__init__(state, depth, parent, action)
+    def __init__(self, state, parent=None, action=None):
+        super(PacmanNode, self).__init__(state, parent, action)
         self.ghost_state = self.state
 
 
 class GhostNode(Node):
 
-    def __init__(self, state, depth, parent=None, action=None):
+    def __init__(self, state, parent=None, action=None):
         self.probs = []
-        super(GhostNode, self).__init__(state, depth, parent, action)
+        super(GhostNode, self).__init__(state, parent, action)
         self.ghost_state = parent.ghost_state
 
 

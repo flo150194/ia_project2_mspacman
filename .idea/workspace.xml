@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="30700f95-edf4-414c-8efc-ef397b976aca" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/algorithm_functions.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/agentghost2.py" afterPath="$PROJECT_DIR$/agentghost2.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/algorithm_functions.py" afterPath="$PROJECT_DIR$/algorithm_functions.py" />
     </list>
     <ignored path="mspacman.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -18,7 +18,7 @@
   </component>
   <component name="CoverageDataManager">
     <SUITE FILE_PATH="coverage/mspacman$tets.coverage" NAME="tets Coverage Results" MODIFIED="1512489545625" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/mspacman$pacman.coverage" NAME="pacman Coverage Results" MODIFIED="1515174076298" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/mspacman$pacman.coverage" NAME="pacman Coverage Results" MODIFIED="1515191437566" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/mspacman$agentsearch.coverage" NAME="agentsearch Coverage Results" MODIFIED="1512659201101" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/mspacman$agentghost.coverage" NAME="agentghost Coverage Results" MODIFIED="1513350986331" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
@@ -34,8 +34,8 @@
       <file leaf-file-name="agentghost2.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/agentghost2.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="225">
-              <caret line="252" column="29" selection-start-line="252" selection-start-column="29" selection-end-line="252" selection-end-column="29" />
+            <state relative-caret-position="147">
+              <caret line="285" column="42" selection-start-line="285" selection-start-column="32" selection-end-line="285" selection-end-column="42" />
               <folding>
                 <element signature="e#0#29#0" expanded="true" />
               </folding>
@@ -46,8 +46,8 @@
       <file leaf-file-name="algorithm_functions.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/algorithm_functions.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3499">
-              <caret line="266" column="29" selection-start-line="266" selection-start-column="29" selection-end-line="266" selection-end-column="29" />
+            <state relative-caret-position="72">
+              <caret line="239" column="57" selection-start-line="239" selection-start-column="57" selection-end-line="239" selection-end-column="57" />
               <folding>
                 <element signature="e#0#29#0" expanded="true" />
               </folding>
@@ -249,7 +249,7 @@
       <module name="mspacman" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pacman.py" />
-      <option name="PARAMETERS" value="-l smallClassic  -p agentghost2 -g rpickyghost -z 0.8" />
+      <option name="PARAMETERS" value="-l mediumClassic  -p agentghost2 -g rpickyghost -z 0.8" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <method />
     </configuration>
@@ -590,7 +590,14 @@
       <option name="project" value="LOCAL" />
       <updated>1514566964668</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="Big big push: &#10;Expectiminimax&#10;Evaluation Function Optimization&#10;Safeness implementation&#10;Pattern inference">
+      <created>1515174261450</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1515174261450</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -629,7 +636,8 @@
     <MESSAGE value="Change research strategy in agentghost &#10;Adding ghosts functions interfaces" />
     <MESSAGE value="ExpectiMinimax" />
     <MESSAGE value="ExpectiMinimax + Pruning + Evaluation function Tuning" />
-    <option name="LAST_COMMIT_MESSAGE" value="ExpectiMinimax + Pruning + Evaluation function Tuning" />
+    <MESSAGE value="Big big push: &#10;Expectiminimax&#10;Evaluation Function Optimization&#10;Safeness implementation&#10;Pattern inference" />
+    <option name="LAST_COMMIT_MESSAGE" value="Big big push: &#10;Expectiminimax&#10;Evaluation Function Optimization&#10;Safeness implementation&#10;Pattern inference" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -984,8 +992,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/algorithm_functions.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3499">
-          <caret line="266" column="29" selection-start-line="266" selection-start-column="29" selection-end-line="266" selection-end-column="29" />
+        <state relative-caret-position="72">
+          <caret line="239" column="57" selection-start-line="239" selection-start-column="57" selection-end-line="239" selection-end-column="57" />
           <folding>
             <element signature="e#0#29#0" expanded="true" />
           </folding>
@@ -994,8 +1002,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/agentghost2.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="225">
-          <caret line="252" column="29" selection-start-line="252" selection-start-column="29" selection-end-line="252" selection-end-column="29" />
+        <state relative-caret-position="147">
+          <caret line="285" column="42" selection-start-line="285" selection-start-column="32" selection-end-line="285" selection-end-column="42" />
           <folding>
             <element signature="e#0#29#0" expanded="true" />
           </folding>
