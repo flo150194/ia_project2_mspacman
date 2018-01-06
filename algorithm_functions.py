@@ -180,7 +180,7 @@ def predict_pos_safeness(pos, grid, pacman_depth, ghosts):
     :param pacman_depth: a number representing the minimum number of moves
            required by Pacman to reach the position
     :param ghosts: a list of tuples representing the ghosts' positions
-    :return: True if the position if safe, False otherwise
+    :return: True if the position is safe, False otherwise
     """
     ghost_depth = [-1] * len(ghosts)
     scared = [-1] * len(ghosts)
