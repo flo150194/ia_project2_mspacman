@@ -1,11 +1,9 @@
+
 from pacman import Directions
-from game import Agent
 from util import *
 from copy import deepcopy
 import numpy as np
 import math
-from leftyghost import Leftyghost
-from greedyghost import Greedyghost
 
 # Evaluation Function Coefficients
 NEXT_FOOD = [0, -1, -1.5, -1.75]

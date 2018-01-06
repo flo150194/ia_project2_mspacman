@@ -1,12 +1,7 @@
-from pacman import Directions
+
 from game import Agent
-from util import *
-from copy import deepcopy
-import numpy as np
-import math
 from leftyghost import Leftyghost
 from greedyghost import Greedyghost
-
 from algorithm_functions import *
 
 # Evaluation Function Coefficients
@@ -83,7 +78,6 @@ class Agentghost2(Agent):
 
         # Init the algorithm variables if first turn
         if self.tree is None:
-            self.ghosts_path = [[] for _ in range(self.num_agent - 1)]
             dist = Counter()
             dist['lefty'], dist['greedy'], dist['semi'] = 1/3, 1/3, 1/3
             self.ghosts_proba = [dist.copy() for _ in range(self.num_agent-1)]
@@ -472,7 +466,7 @@ def play_unknown(state, agent):
     Apply all the possible patterns for a ghost for which we don't know the
     pattern at a given state.
 
-    :param state: GameState object representing the cugrrent state
+    :param state: GameState object representing the current state
     :param agent: number representing the ghost playing
     :return: a Counter object linking legal actions and their probability
     """
