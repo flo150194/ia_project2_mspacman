@@ -220,8 +220,7 @@ class Agentghost2(Agent):
         elif node.state.isLose():
             node.set_score(-math.inf)
         elif depth == 0:
-            node.set_score(node.evaluation_function(self.num_foods,
-                                                    self.pattern))
+            node.set_score(node.evaluation_function(self.pattern))
 
         # Search with alpha-beta pruning
         else:
@@ -264,8 +263,7 @@ class Agentghost2(Agent):
         elif node.state.isLose():
             node.set_score(-math.inf)
         elif depth == 0:
-            node.set_score(node.evaluation_function(self.num_foods,
-                                                    self.pattern))
+            node.set_score(node.evaluation_function(self.pattern))
 
         else:
             score = 0
@@ -312,7 +310,7 @@ class Node:
     def set_depth(self, depth):
         self.depth = depth
 
-    def evaluation_function(self, start_food, pattern):
+    def evaluation_function(self, pattern):
 
         # Get required information
         pacman = self.state.getPacmanPosition()
