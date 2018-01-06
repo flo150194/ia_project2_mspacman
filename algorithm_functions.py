@@ -84,7 +84,7 @@ def closest_ghost(pacman, grid, ghosts, ghosts_init):
                             abs(cur_pos[0] - pos[0]) <= 0.5 and \
                             abs(cur_pos[1] - pos[1]) <= 0.5:
                 if ghost.scaredTimer > 0 \
-                        and manhattanDistance(pos, ghosts_init[i]) >= 1:
+                        and manhattanDistance(pos, ghosts_init[i]) >= 2:
                     ghost_depth[i] = math.inf
                     scared[i] = cur[1]
                 else:
