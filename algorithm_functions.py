@@ -21,7 +21,6 @@ PROBA_THRESHOLD = 0.1
 LEFTY, GREEDY, SEMI, UNKNOWN = 0, 1, 2, 3
 HUNT, DANGEROUS, NORMAL, SAFE = 0, 1, 2, 3
 
-
 ###########################
 #  Evaluation Functions  #
 ###########################
@@ -54,6 +53,55 @@ def closest_food(pacman, food_pos, grid):
                 queue.push(tile)
                 seen.append(tile[0])
 
+def closest_ghost(pacman, grid, ghosts, ghosts_init):
+    """
+    Computes the distance to the closest active and scared ghosts from Pacman
+    in the maze.
+
+    :param pacman: tuple representing Pacman's current position
+    :param grid: Grid object representing the maze
+    :param ghosts: list AgentState objects representing the ghosts
+    :param ghosts_init: list of tuples representing the inital positions of the
+           ghosts
+    :return: the the distance to the closest active and scared ghosts
+    """
+
+    ghost_depth = [-1] * len(ghosts)
+    scared = [-1] * len(ghosts)
+    seen = [deepcopy(pacman)]
+
+    queue = Queue()
+    queue.push((deepcopy(pacman), 0))
+    nb_tiles = grid.height * grid.width - len(grid.asList())
+
+    while not queue.isEmpty() and len(seen) < nb_tiles:
+        cur = queue.pop()
+        for i in range(len(ghosts)):
+            ghost = ghosts[i]
+            cur_pos = cur[0]
+            pos = ghost.getPosition()
+            if ghost_depth[i] < 0 and scared[i] < 0 and \
+                            abs(cur_pos[0] - pos[0]) <= 0.5 and \
+                            abs(cur_pos[1] - pos[1]) <= 0.5:
+                if ghost.scaredTimer > 0 \
+                        and manhattanDistance(pos, ghosts_init[i]) >= 1:
+                    ghost_depth[i] = math.inf
+                    scared[i] = cur[1]
+                else:
+                    ghost_depth[i] = cur[1]
+                    scared[i] = math.inf
+
+        if min(ghost_depth) > 0 and min(scared) > 0:
+            break
+
+        neighbors, actions = neighbor_lookup(cur[0], grid, cur[1], 1)
+        for tile in neighbors:
+            if tile[0] not in seen:
+                queue.push(tile)
+                seen.append(tile[0])
+
+    return min(ghost_depth) if min(ghost_depth) is not math.inf else 0, \
+           min(scared) if min(scared) is not math.inf else 0
 
 def num_foods(foods):
     """
@@ -63,7 +111,6 @@ def num_foods(foods):
     :return: the amount of food dots
     """
     return len(foods)
-
 
 def num_capsules(caps):
     """
@@ -88,21 +135,6 @@ def num_scared_ghost(ghosts):
             nb += 1
     return nb
 
-
-def closest_capsule(pacman, caps_pos):
-    """
-    Computes the closest distance of any capsule to Pacman.
-
-    :param pacman: tuple representing Pacman's position
-    :param caps_pos: list of tuples representing positions of capsules
-    :return: the closest distance to Pacman
-    """
-    capsule_distances = []
-    for caps in caps_pos:
-        capsule_distances.append(manhattanDistance(caps, pacman))
-    return min(capsule_distances) if len(capsule_distances) > 0 else 1
-
-
 #########################
 #  Safeness Prediction  #
 #########################
@@ -125,7 +157,6 @@ def pick_safe_action(state, actions):
             return action
 
     return None
-
 
 def predict_path_safeness(state, map, action):
     """
@@ -153,7 +184,7 @@ def predict_path_safeness(state, map, action):
     while True:
         if cur in state.getCapsules():
             return True
-        safe, _, _ = predict_pos_safeness(deepcopy(cur), map, pacman, ghosts)
+        safe = predict_pos_safeness(deepcopy(cur), map, pacman, ghosts)
         if not safe:
             return False
         positions, actions = neighbor_lookup(cur, map)
@@ -167,7 +198,6 @@ def predict_path_safeness(state, map, action):
         pacman += 1
 
     return True
-
 
 def predict_pos_safeness(pos, grid, pacman_depth, ghosts):
     """
@@ -216,14 +246,9 @@ def predict_pos_safeness(pos, grid, pacman_depth, ghosts):
                 seen.append(tile[0])
 
     if pacman_depth < min(ghost_depth):
-        return True, \
-               min(ghost_depth) if min(ghost_depth) is not math.inf else 0, \
-               min(scared) if min(scared) is not math.inf else 0
+        return True
     else:
-        return False, \
-               min(ghost_depth) if min(ghost_depth) is not math.inf else 0, \
-               min(scared) if min(scared) is not math.inf else 0
-
+        return False
 
 def neighbor_lookup(pos, grid, depth=0, delta=1.0):
     """

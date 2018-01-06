@@ -20,7 +20,6 @@ PROBA_THRESHOLD = 0.1
 LEFTY, GREEDY, SEMI, UNKNOWN = 0, 1, 2, 3
 HUNT, DANGEROUS, NORMAL, SAFE = 0, 1, 2, 3
 
-
 class Agentghost2(Agent):
 
     def __init__(self, index=0, time_eater=40, g_pattern=0):
@@ -55,6 +54,7 @@ class Agentghost2(Agent):
         self.num_foods = 0
         self.num_agent = 0
         self.num_scared = 0
+        self.ghost_init = None
         self.ghosts_previous = None
         self.ghosts_proba = None
         self.lefty_proba = None
@@ -82,6 +82,7 @@ class Agentghost2(Agent):
             dist['lefty'], dist['greedy'], dist['semi'] = 1/3, 1/3, 1/3
             self.ghosts_proba = [dist.copy() for _ in range(self.num_agent-1)]
             self.num_foods = num_foods(state.getFood().asList())
+            self.ghost_init = state.getGhostPositions()
 
         # Perform pattern inference if unknown pattern
         elif self.pattern == UNKNOWN:
@@ -93,6 +94,7 @@ class Agentghost2(Agent):
         neighbor_tiles, _ = neighbor_lookup(state.getPacmanPosition(),
                                             state.getWalls())
         num_scared = num_scared_ghost(state.getGhostStates())
+        action = None
 
         # If needed, perform expectiminimax
         if self.previous is None or self.previous == Directions.STOP or\
@@ -220,7 +222,8 @@ class Agentghost2(Agent):
         elif node.state.isLose():
             node.set_score(-math.inf)
         elif depth == 0:
-            node.set_score(node.evaluation_function(self.pattern))
+            node.set_score(node.evaluation_function(self.pattern,
+                                                    self.ghost_init))
 
         # Search with alpha-beta pruning
         else:
@@ -263,8 +266,8 @@ class Agentghost2(Agent):
         elif node.state.isLose():
             node.set_score(-math.inf)
         elif depth == 0:
-            node.set_score(node.evaluation_function(self.pattern))
-
+            node.set_score(node.evaluation_function(self.pattern,
+                                                    self.ghost_init))
         else:
             score = 0
             legal = node.state.getLegalActions(agent)
@@ -290,12 +293,15 @@ class Agentghost2(Agent):
 
         return node.score
 
-
 ###########################
 #  Expecti Minimax Nodes  #
 ###########################
 
 class Node:
+    """
+    This class implements a Node object that will be used to perform
+    Expectiminimax algorithm.
+    """
 
     def __init__(self, state, parent=None, action=None):
         self.state = state
@@ -305,12 +311,23 @@ class Node:
         self.score = 0
 
     def set_score(self, score):
+        """
+        Sets a new score for the node.
+
+        :param score: the new score to set
+        """
         self.score = score
 
-    def set_depth(self, depth):
-        self.depth = depth
+    def evaluation_function(self, pattern, ghost_init):
+        """
+        Computes the evaluation function of this node for the Expectiminimax
+        algorithm.
 
-    def evaluation_function(self, pattern):
+        :param pattern: a number representing the pattern of the ghosts
+        :param ghost_init: a list op tuples representing the initial position
+               of the ghosts
+        :return: the value of the evaluation function
+        """
 
         # Get required information
         pacman = self.state.getPacmanPosition()
@@ -320,20 +337,22 @@ class Node:
         score = self.state.getScore()
         grid = self.state.getWalls()
 
+        # Fixing the situation thresholds according to the map and pattern
         if pattern == LEFTY:
             limit = 0
-        elif grid.height*grid.width > 250:
+        elif grid.height*grid.width < 200:
             limit = 2
         else:
             limit = 4
 
         # Compute eval functions
         next_food = closest_food(pacman, foods, grid)
-        _, act_ghost, scared = predict_pos_safeness(pacman, grid, 0, ghosts)
+        act_ghost, scared = closest_ghost(pacman, grid, ghosts, ghost_init)
         num_food = num_foods(foods)
         num_caps = num_capsules(capsules)
         num_scared = num_scared_ghost(ghosts)
 
+        # Hunting Situation
         if num_scared > 0 and (act_ghost > limit or act_ghost == 0):
             scared *= SCARED_GHOST[HUNT]
             num_scared *= NUM_SCARED[HUNT]
@@ -342,6 +361,7 @@ class Node:
             next_food *= NEXT_FOOD[HUNT]
             num_food *= NUM_FOOD[HUNT]
 
+        # Dangerous Situation
         elif act_ghost <= limit:
             scared *= SCARED_GHOST[DANGEROUS]
             num_scared *= NUM_SCARED[DANGEROUS]
@@ -350,6 +370,7 @@ class Node:
             next_food *= NEXT_FOOD[DANGEROUS]
             num_food *= NUM_FOOD[DANGEROUS]
 
+        # Normal Situation
         elif limit < act_ghost <= limit*2:
             scared *= SCARED_GHOST[NORMAL]
             num_scared *= NUM_SCARED[NORMAL]
@@ -358,6 +379,7 @@ class Node:
             next_food *= NEXT_FOOD[NORMAL]
             num_food *= NUM_FOOD[NORMAL]
 
+        # Safe Situation
         else:
             scared *= SCARED_GHOST[SAFE]
             num_scared *= NUM_SCARED[SAFE]
@@ -372,21 +394,26 @@ class Node:
         # Return combined score
         return score
 
-
 class PacmanNode(Node):
+    """
+    This child class of Node implements a Node that will be used to represent
+    Pacman in the Expectiminimax algorithm.
+    """
 
     def __init__(self, state, parent=None, action=None):
         super(PacmanNode, self).__init__(state, parent, action)
         self.ghost_state = self.state
 
-
 class GhostNode(Node):
+    """
+    This child class of Node implements a Node that will be used to represent
+    a ghost in the Expectiminimax algorithm.
+    """
 
     def __init__(self, state, parent=None, action=None):
         self.probs = []
         super(GhostNode, self).__init__(state, parent, action)
         self.ghost_state = parent.ghost_state
-
 
 ###############################
 #  Ghosts Position Inference  #
@@ -403,7 +430,6 @@ def play_lefty(state, agent):
 
     return Leftyghost(agent).getDistribution(state)
 
-
 def play_greedy(state, agent):
     """
     Apply the greedy pattern for a given ghost at a given state.
@@ -414,7 +440,6 @@ def play_greedy(state, agent):
     """
 
     return Greedyghost(agent).getDistribution(state)
-
 
 def play_random(state, agent):
     """
@@ -431,7 +456,6 @@ def play_random(state, agent):
 
     probs.normalize()
     return probs
-
 
 def play_semi_random(state, agent):
     """
@@ -457,7 +481,6 @@ def play_semi_random(state, agent):
 
     probs.normalize()
     return probs
-
 
 def play_unknown(state, agent):
     """
