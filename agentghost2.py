@@ -78,19 +78,19 @@ class Agentghost2(Agent):
         - A legal move as defined game.Directions.
         """
 
-        self.num_agent = len(state.getGhostPositions())+1
-        max_depth = self.num_agent*MAX_DEPTH
+        self.num_agent = len(state.getGhostPositions()) + 1
+        max_depth = self.num_agent * MAX_DEPTH
 
         # Init the algorithm variables if first turn
         if self.tree is None:
-            self.ghosts_path = [[] for _ in range(self.num_agent-1)]
+            self.ghosts_path = [[] for _ in range(self.num_agent - 1)]
             dist = Counter()
             dist['lefty'], dist['greedy'], dist['semi'] = 1/3, 1/3, 1/3
             self.ghosts_proba = [dist.copy() for _ in range(self.num_agent-1)]
             self.num_foods = num_foods(state.getFood().asList())
 
         # Perform pattern inference if unknown pattern
-        elif self.pattern == 3:
+        elif self.pattern == UNKNOWN:
             self.pattern_inference(state)
 
         self.tree = PacmanNode(state)
@@ -141,8 +141,8 @@ class Agentghost2(Agent):
             pattern_state = state
 
         # Compute probability distribution for each pattern and ghost
-        if self.pattern == 3:
-            self.lefty_proba = [play_lefty(pattern_state, i+1) for i in
+        if self.pattern == UNKNOWN:
+            self.lefty_proba = [play_lefty(pattern_state, i + 1) for i in
                                 range(self.num_agent-1)]
             self.greedy_proba = [play_greedy(pattern_state, i + 1) for i in
                                  range(self.num_agent - 1)]
@@ -153,7 +153,7 @@ class Agentghost2(Agent):
 
     def pattern_inference(self, state):
         """
-        Trys to infer a still unknown pattern of the ghosts based on their
+        Tries to infer a still unknown pattern of the ghosts based on their
         previous moves.
 
         :param state: a GameState object representing the current state of the

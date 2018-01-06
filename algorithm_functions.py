@@ -181,8 +181,6 @@ def predict_pos_safeness(pos, grid, pacman_depth, ghosts):
     :param grid: a Grid object representing the maze
     :param pacman_depth: a number representing the minimum number of moves
            required by Pacman to reach the position
-    :param map: a binary grid representing the maze
-    :param pacman: a tuple representing Pacman's position
     :param ghosts: a list of tuples representing the ghosts' positions
     :return: True if the position if safe, False otherwise
     """
