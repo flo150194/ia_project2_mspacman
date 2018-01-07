@@ -35,6 +35,8 @@ class Agentghost(Agent):
         self.actions = []
         # Set of goals
         self.goals = []
+        # Set of capsules
+        self.capsules = []
         # Importance given to the heuristic function
         self.h_coefficient = 1
         # Next goal
@@ -103,10 +105,9 @@ class Agentghost(Agent):
             self.next_strategy()
 
         # Retrieve the list of actions to perform
-        while self.current.parent != None:
+        while self.current.parent is not None:
             self.actions.append(self.current.action)
             self.current = self.current.parent
-
 
     def next_strategy(self):
         """
@@ -135,7 +136,6 @@ class Agentghost(Agent):
         else:
             m = 1
 
-
     def add_deterministic_open_states(self, children):
         """
         Adds new states to the list of frontier states, if it has never
@@ -152,7 +152,8 @@ class Agentghost(Agent):
                 self.open_states.append(child)
                 self.open_states_positions.append(position)
 
-    def closest_ghost(self, pacman, ghosts):
+    @staticmethod
+    def closest_ghost(pacman, ghosts):
         """
         Compute the shortest distance from Pacman to any ghost.
 
@@ -292,7 +293,7 @@ class DeterministicNode(Node):
 
         for action in actions:
             # Does not care about STOP action in search mode
-            if (action != Directions.STOP):
+            if action != Directions.STOP:
                 child = self.state.generateSuccessor(0, action)
                 position = child.getPacmanPosition()
                 # Avoid cycle by checking in the previously visited states
@@ -301,7 +302,8 @@ class DeterministicNode(Node):
                                              deepcopy(self.path))
                     self.children.append(node)
 
-    def get_next_move_leftypattern(self, legal):
+    @staticmethod
+    def get_next_move_leftypattern(legal):
         """
         Determines the next action to perform for a ghost following the
         lefty pattern.
@@ -410,7 +412,6 @@ class StochasticNode(Node):
 
     @staticmethod
     def update_prob_lefty(probs, walls, direction):
-        #TODO: GENERALIZE TO PROBABILITIES (PROBLEM WITH DIRECTION)
         """Update a probability grid according to a counterclockwise left
         strategy.
 
@@ -423,6 +424,11 @@ class StochasticNode(Node):
         :return: a numpy array of floats which is the result of a one step
         update of the initial probability grid according to a counterclockwise
         left strategy.
+
+        Rem :
+        -----
+        This method does not work as is and requires knowing the direction of
+        ghosts multiple steps in advance for it to behave properly.
         """
         old_probs = probs.copy()
         width = walls.width

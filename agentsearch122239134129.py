@@ -5,7 +5,8 @@ from copy import deepcopy
 import numpy as np
 import math
 
-class Agentsearch(Agent):
+
+class Agentsearch122239134129(Agent):
     def __init__(self, index=0, time_eater=40, g_pattern=-1):
         """
         Arguments:

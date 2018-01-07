@@ -21,7 +21,7 @@ LEFTY, GREEDY, SEMI, UNKNOWN = 0, 1, 2, 3
 HUNT, DANGEROUS, NORMAL, SAFE = 0, 1, 2, 3
 
 
-class Agentghost2(Agent):
+class Agentghost122239134129(Agent):
 
     def __init__(self, index=0, time_eater=40, g_pattern=0):
         """
