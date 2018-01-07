@@ -197,11 +197,15 @@ def predict_path_safeness(state, map, action):
         positions, actions = neighbor_lookup(cur, map)
         if len(positions) > 2:
             break
-        for i in range(len(actions)):
-            if actions[i] != Directions.REVERSE[action]:
-                action = actions[i]
-                cur = positions[i][0]
-                break
+        if len(positions) == 1:
+            action = actions[0]
+            cur = positions[0][0]
+        else:
+            for i in range(len(actions)):
+                if actions[i] != Directions.REVERSE[action]:
+                    action = actions[i]
+                    cur = positions[i][0]
+                    break
         pacman += 1
 
     return True
