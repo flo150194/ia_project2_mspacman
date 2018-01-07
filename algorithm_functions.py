@@ -21,6 +21,7 @@ PROBA_THRESHOLD = 0.1
 LEFTY, GREEDY, SEMI, UNKNOWN = 0, 1, 2, 3
 HUNT, DANGEROUS, NORMAL, SAFE = 0, 1, 2, 3
 
+
 ###########################
 #  Evaluation Functions  #
 ###########################
@@ -54,6 +55,7 @@ def closest_food(pacman, food_pos, grid):
                 queue.push(tile)
                 seen.append(tile[0])
 
+
 def closest_ghost(pacman, grid, ghosts, ghosts_init):
     """
     Computes the distance to the closest active and scared ghosts from Pacman
@@ -82,8 +84,8 @@ def closest_ghost(pacman, grid, ghosts, ghosts_init):
             cur_pos = cur[0]
             pos = ghost.getPosition()
             if ghost_depth[i] < 0 and scared[i] < 0 and \
-                            abs(cur_pos[0] - pos[0]) <= 0.5 and \
-                            abs(cur_pos[1] - pos[1]) <= 0.5:
+                    abs(cur_pos[0] - pos[0]) <= 0.5 and \
+                    abs(cur_pos[1] - pos[1]) <= 0.5:
                 if ghost.scaredTimer > 0 \
                         and manhattanDistance(pos, ghosts_init[i]) >= 2:
                     ghost_depth[i] = math.inf
@@ -102,7 +104,8 @@ def closest_ghost(pacman, grid, ghosts, ghosts_init):
                 seen.append(tile[0])
 
     return min(ghost_depth) if min(ghost_depth) is not math.inf else 0, \
-           min(scared) if min(scared) is not math.inf else 0
+        min(scared) if min(scared) is not math.inf else 0
+
 
 def num_foods(foods):
     """
@@ -112,6 +115,7 @@ def num_foods(foods):
     :return: the amount of food dots
     """
     return len(foods)
+
 
 def num_capsules(caps):
     """
@@ -136,6 +140,7 @@ def num_scared_ghost(ghosts):
             nb += 1
     return nb
 
+
 #########################
 #  Safeness Prediction  #
 #########################
@@ -158,6 +163,7 @@ def pick_safe_action(state, actions):
             return action
 
     return None
+
 
 def predict_path_safeness(state, map, action):
     """
@@ -199,6 +205,7 @@ def predict_path_safeness(state, map, action):
         pacman += 1
 
     return True
+
 
 def predict_pos_safeness(pos, grid, pacman_depth, ghosts):
     """
@@ -250,6 +257,7 @@ def predict_pos_safeness(pos, grid, pacman_depth, ghosts):
         return True
     else:
         return False
+
 
 def neighbor_lookup(pos, grid, depth=0, delta=1.0):
     """

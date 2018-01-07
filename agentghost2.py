@@ -20,6 +20,7 @@ PROBA_THRESHOLD = 0.1
 LEFTY, GREEDY, SEMI, UNKNOWN = 0, 1, 2, 3
 HUNT, DANGEROUS, NORMAL, SAFE = 0, 1, 2, 3
 
+
 class Agentghost2(Agent):
 
     def __init__(self, index=0, time_eater=40, g_pattern=0):
@@ -293,6 +294,7 @@ class Agentghost2(Agent):
 
         return node.score
 
+
 ###########################
 #  Expecti Minimax Nodes  #
 ###########################
@@ -394,6 +396,7 @@ class Node:
         # Return combined score
         return score
 
+
 class PacmanNode(Node):
     """
     This child class of Node implements a Node that will be used to represent
@@ -403,6 +406,7 @@ class PacmanNode(Node):
     def __init__(self, state, parent=None, action=None):
         super(PacmanNode, self).__init__(state, parent, action)
         self.ghost_state = self.state
+
 
 class GhostNode(Node):
     """
@@ -414,6 +418,7 @@ class GhostNode(Node):
         self.probs = []
         super(GhostNode, self).__init__(state, parent, action)
         self.ghost_state = parent.ghost_state
+
 
 ###############################
 #  Ghosts Position Inference  #
@@ -430,6 +435,7 @@ def play_lefty(state, agent):
 
     return Leftyghost(agent).getDistribution(state)
 
+
 def play_greedy(state, agent):
     """
     Apply the greedy pattern for a given ghost at a given state.
@@ -440,6 +446,7 @@ def play_greedy(state, agent):
     """
 
     return Greedyghost(agent).getDistribution(state)
+
 
 def play_random(state, agent):
     """
@@ -456,6 +463,7 @@ def play_random(state, agent):
 
     probs.normalize()
     return probs
+
 
 def play_semi_random(state, agent):
     """
@@ -481,6 +489,7 @@ def play_semi_random(state, agent):
 
     probs.normalize()
     return probs
+
 
 def play_unknown(state, agent):
     """
