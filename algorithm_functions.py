@@ -41,8 +41,9 @@ def closest_food(pacman, food_pos, grid):
 
     queue = Queue()
     queue.push((deepcopy(pacman), 0))
+    nb_tiles = grid.height * grid.width - len(grid.asList())
 
-    while not queue.isEmpty():
+    while not queue.isEmpty() and len(seen) < nb_tiles:
         cur = queue.pop()
         if cur[0] in food_pos:
             return cur[1]
